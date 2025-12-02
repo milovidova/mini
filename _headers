@@ -1,0 +1,6 @@
+/*
+  X-Frame-Options: ALLOWALL
+  Content-Security-Policy: default-src 'self' https: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'self' https://*.telegram.org telegram:;
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: *
