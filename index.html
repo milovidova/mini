@@ -107,6 +107,7 @@
         cursor: pointer;
         margin-bottom: 16px;
         background: white;
+        transition: all 0.3s ease;
       }
 
       .file-upload:hover {
@@ -114,11 +115,38 @@
         background: #f8f9fa;
       }
 
-      .file-preview {
-        max-width: 100%;
-        border-radius: 8px;
+      .file-upload.dragover {
+        border-color: #28a745;
+        background: #e8f5e9;
+      }
+
+      .file-upload span {
+        font-size: 48px;
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .file-preview-container {
         margin-bottom: 16px;
         display: none;
+      }
+
+      .file-preview {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        object-fit: contain;
+      }
+
+      .remove-image {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
       }
 
       .btn {
@@ -132,6 +160,11 @@
         font-weight: 600;
         cursor: pointer;
         margin-top: 8px;
+        transition: transform 0.2s;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
       }
 
       .btn-success {
@@ -160,6 +193,15 @@
         border: 1px solid #e5e5e5;
         border-radius: 12px;
         padding: 16px;
+      }
+
+      .project-image {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        object-fit: contain;
+        background: #f8f9fa;
       }
 
       .project-title {
@@ -276,16 +318,20 @@
         color: #666;
       }
 
-      .debug-info {
-        position: fixed;
-        bottom: 10px;
-        left: 10px;
-        background: #f0f0f0;
-        padding: 8px;
-        border-radius: 5px;
-        font-size: 10px;
-        max-width: 200px;
+      .progress-bar {
+        height: 6px;
+        background: #e5e5e5;
+        border-radius: 3px;
+        margin-top: 8px;
+        overflow: hidden;
         display: none;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        background: #28a745;
+        width: 0%;
+        transition: width 0.3s;
       }
     </style>
   </head>
@@ -310,6 +356,38 @@
 
       <!-- Create Project Section -->
       <div id="create" class="section active">
+        <!-- Загрузка фото -->
+        <div
+          class="file-upload"
+          id="dropArea"
+          onclick="document.getElementById('projectImage').click()"
+        >
+          <span>📷</span>
+          <p><strong>Нажмите или перетащите файл</strong></p>
+          <small>PNG, JPG, GIF до 5MB</small>
+        </div>
+        <input
+          type="file"
+          id="projectImage"
+          accept="image/*"
+          hidden
+          onchange="handleImageSelect(event)"
+        />
+
+        <!-- Превью изображения -->
+        <div class="file-preview-container" id="imagePreviewContainer">
+          <img id="imagePreview" class="file-preview" alt="Превью" />
+          <button class="remove-image" onclick="removeImage()">
+            ✕ Удалить
+          </button>
+        </div>
+
+        <!-- Прогресс загрузки -->
+        <div class="progress-bar" id="uploadProgress">
+          <div class="progress-bar-fill" id="uploadProgressFill"></div>
+        </div>
+
+        <!-- Форма проекта -->
         <div class="form-group">
           <input
             type="text"
@@ -372,9 +450,6 @@
     <!-- Notification -->
     <div id="notification" class="notification"></div>
 
-    <!-- Debug Info -->
-    <div id="debugInfo" class="debug-info"></div>
-
     <script>
       // ===== КОНФИГУРАЦИЯ =====
       const SUPABASE_URL = 'https://emctdqhrcptxlfpzwejc.supabase.co'
@@ -383,6 +458,8 @@
       // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
       let supabase
       let currentUser = null
+      let selectedImageFile = null
+      let selectedImageUrl = null
 
       // ===== ИНИЦИАЛИЗАЦИЯ =====
       function initSupabase() {
@@ -398,6 +475,7 @@
           return true
         } catch (error) {
           console.error('❌ Ошибка инициализации Supabase:', error)
+          showNotification('❌ Ошибка подключения к базе данных', 'error')
           return false
         }
       }
@@ -460,6 +538,135 @@
         else if (tabName === 'community') loadCommunityProjects()
       }
 
+      // ===== РАБОТА С ИЗОБРАЖЕНИЯМИ =====
+      function handleImageSelect(event) {
+        const file = event.target.files[0]
+        if (!file) return
+
+        validateAndPreviewImage(file)
+      }
+
+      function validateAndPreviewImage(file) {
+        // Проверка типа файла
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg']
+        if (!validTypes.includes(file.type)) {
+          showNotification('❌ Поддерживаются только JPG, PNG, GIF', 'error')
+          return
+        }
+
+        // Проверка размера (5MB)
+        const maxSize = 5 * 1024 * 1024 // 5MB
+        if (file.size > maxSize) {
+          showNotification('❌ Файл слишком большой (макс. 5MB)', 'error')
+          return
+        }
+
+        selectedImageFile = file
+
+        // Показываем превью
+        const reader = new FileReader()
+        reader.onload = function (e) {
+          selectedImageUrl = e.target.result
+          document.getElementById('imagePreview').src = selectedImageUrl
+          document.getElementById('imagePreviewContainer').style.display =
+            'block'
+          showNotification('✅ Изображение загружено', 'success')
+        }
+        reader.readAsDataURL(file)
+      }
+
+      function removeImage() {
+        selectedImageFile = null
+        selectedImageUrl = null
+        document.getElementById('projectImage').value = ''
+        document.getElementById('imagePreviewContainer').style.display = 'none'
+        document.getElementById('imagePreview').src = ''
+      }
+
+      // Drag & Drop
+      function setupDragAndDrop() {
+        const dropArea = document.getElementById('dropArea')
+
+        ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+          dropArea.addEventListener(eventName, preventDefaults, false)
+        })
+
+        function preventDefaults(e) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+
+        ;['dragenter', 'dragover'].forEach((eventName) => {
+          dropArea.addEventListener(eventName, highlight, false)
+        })
+
+        ;['dragleave', 'drop'].forEach((eventName) => {
+          dropArea.addEventListener(eventName, unhighlight, false)
+        })
+
+        function highlight() {
+          dropArea.classList.add('dragover')
+        }
+
+        function unhighlight() {
+          dropArea.classList.remove('dragover')
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false)
+
+        function handleDrop(e) {
+          const dt = e.dataTransfer
+          const file = dt.files[0]
+
+          if (file) {
+            validateAndPreviewImage(file)
+          }
+        }
+      }
+
+      async function uploadImageToSupabase() {
+        if (!selectedImageFile) return null
+
+        try {
+          showNotification('⏳ Загружаю изображение...')
+          document.getElementById('uploadProgress').style.display = 'block'
+
+          // Генерируем уникальное имя файла
+          const fileExt = selectedImageFile.name.split('.').pop()
+          const fileName = `${Date.now()}_${Math.random()
+            .toString(36)
+            .substring(2)}.${fileExt}`
+          const filePath = `project-images/${fileName}`
+
+          // Загружаем в Supabase Storage
+          const { data, error } = await supabase.storage
+            .from('project-images')
+            .upload(filePath, selectedImageFile, {
+              cacheControl: '3600',
+              upsert: false
+            })
+
+          if (error) {
+            console.error('❌ Ошибка загрузки изображения:', error)
+            showNotification('❌ Ошибка загрузки изображения', 'error')
+            return null
+          }
+
+          // Получаем публичный URL
+          const {
+            data: { publicUrl }
+          } = supabase.storage.from('project-images').getPublicUrl(filePath)
+
+          showNotification('✅ Изображение загружено!', 'success')
+          return publicUrl
+        } catch (error) {
+          console.error('❌ Ошибка загрузки:', error)
+          return null
+        } finally {
+          document.getElementById('uploadProgress').style.display = 'none'
+        }
+      }
+
       // ===== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ =====
       async function getOrCreateUser() {
         if (!supabase) {
@@ -512,7 +719,7 @@
         }
       }
 
-      // ===== ПРОЕКТЫ =====
+      // ===== СОЗДАНИЕ ПРОЕКТА С ИЗОБРАЖЕНИЕМ =====
       async function createProject() {
         const title = document.getElementById('projectTitle').value.trim()
         const description = document
@@ -536,7 +743,14 @@
 
         try {
           const userId = await getOrCreateUser()
+          let imageUrl = null
 
+          // Если есть изображение - загружаем его
+          if (selectedImageFile) {
+            imageUrl = await uploadImageToSupabase()
+          }
+
+          // Создаем проект в базе
           const { data: project, error } = await supabase
             .from('projects')
             .insert([
@@ -545,14 +759,15 @@
                 description: description || null,
                 category: category,
                 feedback_request: feedbackRequest || null,
-                user_id: userId
+                user_id: userId,
+                image: imageUrl // Сохраняем URL изображения
               }
             ])
             .select('*')
             .single()
 
           if (error) {
-            console.error('❌ Ошибка создания:', error)
+            console.error('❌ Ошибка создания проекта:', error)
             showNotification(`❌ Ошибка: ${error.message}`, 'error')
             return
           }
@@ -564,6 +779,7 @@
           document.getElementById('projectDescription').value = ''
           document.getElementById('projectCategory').value = ''
           document.getElementById('feedbackRequest').value = ''
+          removeImage()
 
           // Переход на вкладку проектов
           setTimeout(() => showTab('view'), 1000)
@@ -573,6 +789,7 @@
         }
       }
 
+      // ===== ЗАГРУЗКА ПРОЕКТОВ =====
       async function loadMyProjects() {
         const container = document.getElementById('myProjectsList')
         container.innerHTML = '<div class="loading">🔄 Загрузка...</div>'
@@ -689,6 +906,19 @@
           .map(
             (project) => `
                 <div class="project-card">
+                    ${
+                      project.image
+                        ? `
+                        <img src="${
+                          project.image
+                        }" class="project-image" alt="${escapeHtml(
+                            project.title
+                          )}"
+                             onerror="this.style.display='none'">
+                    `
+                        : ''
+                    }
+                    
                     <div class="project-title">${escapeHtml(
                       project.title
                     )}</div>
@@ -798,54 +1028,16 @@
 
         if (!initSupabase()) {
           showNotification('❌ Ошибка подключения к базе', 'error')
-        } else {
-          // Авто-тест подключения
-          setTimeout(async () => {
-            try {
-              const { data, error } = await supabase
-                .from('users')
-                .select('count')
-                .limit(1)
-
-              if (!error) {
-                console.log('✅ Подключение к БД успешно')
-              }
-            } catch (e) {
-              console.warn('⚠️ Проблемы с подключением к БД')
-            }
-          }, 1000)
         }
+
+        // Настройка drag & drop
+        setupDragAndDrop()
 
         // Загружаем проекты сообщества
         loadCommunityProjects()
 
         showNotification('👋 Добро пожаловать в RE:FORM!')
       })
-
-      // ===== ДЕБАГ ФУНКЦИИ =====
-      async function testDatabase() {
-        console.log('🧪 Тестирую базу данных...')
-
-        try {
-          // Тест пользователей
-          const { data: users, error: usersError } = await supabase
-            .from('users')
-            .select('count(*)')
-
-          // Тест проектов
-          const { data: projects, error: projectsError } = await supabase
-            .from('projects')
-            .select('count(*)')
-
-          console.log('Пользователей:', users?.[0]?.count || 0)
-          console.log('Проектов:', projects?.[0]?.count || 0)
-
-          showNotification('✅ Тест пройден', 'success')
-        } catch (error) {
-          console.error('❌ Тест не пройден:', error)
-          showNotification('❌ Ошибка теста', 'error')
-        }
-      }
     </script>
   </body>
 </html>
