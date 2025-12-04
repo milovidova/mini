@@ -1,10 +1,10 @@
--- 1. Удаление старых таблиц (если есть)
+
 DROP TABLE IF EXISTS feedbacks CASCADE;
 DROP TABLE IF EXISTS projects CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS waitlists CASCADE;
 
--- 2. Создание таблиц
+
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   telegram_id TEXT UNIQUE,
@@ -48,36 +48,35 @@ CREATE TABLE waitlists (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. ВКЛЮЧАЕМ RLS (Row Level Security)
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feedbacks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE waitlists ENABLE ROW LEVEL SECURITY;
 
--- 4. Создаем политики доступа (разрешаем ВСЕ операции)
--- Для таблицы users
+
 CREATE POLICY "Allow all operations on users" ON users
   FOR ALL USING (true);
 
--- Для таблицы projects
+
 CREATE POLICY "Allow all operations on projects" ON projects
   FOR ALL USING (true);
 
--- Для таблицы feedbacks
+
 CREATE POLICY "Allow all operations on feedbacks" ON feedbacks
   FOR ALL USING (true);
 
--- Для таблицы waitlists
+
 CREATE POLICY "Allow all operations on waitlists" ON waitlists
   FOR ALL USING (true);
 
--- 5. Создаем индексы для ускорения
+
 CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feedbacks_project_id ON feedbacks(project_id);
 
--- 6. Вставляем тестового пользователя (опционально)
+
 INSERT INTO users (telegram_id, username, email, balance, experience_level) 
 VALUES ('test123', 'test_user', 'test@test.com', 3, 'beginner')
 ON CONFLICT (telegram_id) DO NOTHING;

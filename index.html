@@ -337,13 +337,11 @@
   </head>
   <body>
     <div class="container">
-      <!-- Header -->
       <div class="header">
         <h1>RE:FORM</h1>
         <div id="userInfo">👤 Загрузка...</div>
       </div>
 
-      <!-- Tabs -->
       <div class="tabs">
         <button class="tab active" onclick="showTab('create')">
           📤 Создать
@@ -354,9 +352,7 @@
         </button>
       </div>
 
-      <!-- Create Project Section -->
       <div id="create" class="section active">
-        <!-- Загрузка фото -->
         <div
           class="file-upload"
           id="dropArea"
@@ -374,7 +370,6 @@
           onchange="handleImageSelect(event)"
         />
 
-        <!-- Превью изображения -->
         <div class="file-preview-container" id="imagePreviewContainer">
           <img id="imagePreview" class="file-preview" alt="Превью" />
           <button class="remove-image" onclick="removeImage()">
@@ -382,12 +377,10 @@
           </button>
         </div>
 
-        <!-- Прогресс загрузки -->
         <div class="progress-bar" id="uploadProgress">
           <div class="progress-bar-fill" id="uploadProgressFill"></div>
         </div>
 
-        <!-- Форма проекта -->
         <div class="form-group">
           <input
             type="text"
@@ -432,14 +425,12 @@
         </button>
       </div>
 
-      <!-- View My Projects Section -->
       <div id="view" class="section">
         <div id="myProjectsList" class="loading">
           Загрузка ваших проектов...
         </div>
       </div>
 
-      <!-- Community Projects Section -->
       <div id="community" class="section">
         <div id="communityProjectsList" class="loading">
           Загрузка проектов сообщества...
@@ -447,21 +438,17 @@
       </div>
     </div>
 
-    <!-- Notification -->
     <div id="notification" class="notification"></div>
 
     <script>
-      // ===== КОНФИГУРАЦИЯ =====
       const SUPABASE_URL = 'https://emctdqhrcptxlfpzwejc.supabase.co'
       const SUPABASE_KEY = 'sb_publishable_pdFF9DSJCyWGyex6kieV0w_kjEMv0ND'
 
-      // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
       let supabase
       let currentUser = null
       let selectedImageFile = null
       let selectedImageUrl = null
 
-      // ===== ИНИЦИАЛИЗАЦИЯ =====
       function initSupabase() {
         try {
           console.log('🔄 Инициализация Supabase...')
@@ -512,7 +499,6 @@
         }
       }
 
-      // ===== УТИЛИТЫ =====
       function showNotification(message, type = 'info') {
         console.log(`📢 ${type}: ${message}`)
         const el = document.getElementById('notification')
@@ -538,7 +524,6 @@
         else if (tabName === 'community') loadCommunityProjects()
       }
 
-      // ===== РАБОТА С ИЗОБРАЖЕНИЯМИ =====
       function handleImageSelect(event) {
         const file = event.target.files[0]
         if (!file) return
@@ -547,14 +532,12 @@
       }
 
       function validateAndPreviewImage(file) {
-        // Проверка типа файла
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg']
         if (!validTypes.includes(file.type)) {
           showNotification('❌ Поддерживаются только JPG, PNG, GIF', 'error')
           return
         }
 
-        // Проверка размера (5MB)
         const maxSize = 5 * 1024 * 1024 // 5MB
         if (file.size > maxSize) {
           showNotification('❌ Файл слишком большой (макс. 5MB)', 'error')
@@ -563,7 +546,6 @@
 
         selectedImageFile = file
 
-        // Показываем превью
         const reader = new FileReader()
         reader.onload = function (e) {
           selectedImageUrl = e.target.result
@@ -583,7 +565,6 @@
         document.getElementById('imagePreview').src = ''
       }
 
-      // Drag & Drop
       function setupDragAndDrop() {
         const dropArea = document.getElementById('dropArea')
 
@@ -599,7 +580,6 @@
         ;['dragenter', 'dragover'].forEach((eventName) => {
           dropArea.addEventListener(eventName, highlight, false)
         })
-
         ;['dragleave', 'drop'].forEach((eventName) => {
           dropArea.addEventListener(eventName, unhighlight, false)
         })
@@ -631,14 +611,12 @@
           showNotification('⏳ Загружаю изображение...')
           document.getElementById('uploadProgress').style.display = 'block'
 
-          // Генерируем уникальное имя файла
           const fileExt = selectedImageFile.name.split('.').pop()
           const fileName = `${Date.now()}_${Math.random()
             .toString(36)
             .substring(2)}.${fileExt}`
           const filePath = `project-images/${fileName}`
 
-          // Загружаем в Supabase Storage
           const { data, error } = await supabase.storage
             .from('project-images')
             .upload(filePath, selectedImageFile, {
@@ -652,7 +630,6 @@
             return null
           }
 
-          // Получаем публичный URL
           const {
             data: { publicUrl }
           } = supabase.storage.from('project-images').getPublicUrl(filePath)
@@ -667,7 +644,6 @@
         }
       }
 
-      // ===== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ =====
       async function getOrCreateUser() {
         if (!supabase) {
           console.warn('Supabase не подключен')
@@ -678,7 +654,6 @@
           const telegramId = currentUser.id.toString()
           const username = currentUser.username || `user_${telegramId}`
 
-          // Ищем пользователя
           const { data: existingUser } = await supabase
             .from('users')
             .select('id')
@@ -690,7 +665,6 @@
             return existingUser.id
           }
 
-          // Создаем нового
           console.log('➕ Создаю нового пользователя...')
           const { data: newUser, error } = await supabase
             .from('users')
@@ -719,7 +693,6 @@
         }
       }
 
-      // ===== СОЗДАНИЕ ПРОЕКТА С ИЗОБРАЖЕНИЕМ =====
       async function createProject() {
         const title = document.getElementById('projectTitle').value.trim()
         const description = document
@@ -745,12 +718,10 @@
           const userId = await getOrCreateUser()
           let imageUrl = null
 
-          // Если есть изображение - загружаем его
           if (selectedImageFile) {
             imageUrl = await uploadImageToSupabase()
           }
 
-          // Создаем проект в базе
           const { data: project, error } = await supabase
             .from('projects')
             .insert([
@@ -760,7 +731,7 @@
                 category: category,
                 feedback_request: feedbackRequest || null,
                 user_id: userId,
-                image: imageUrl // Сохраняем URL изображения
+                image: imageUrl
               }
             ])
             .select('*')
@@ -774,14 +745,12 @@
 
           showNotification('✅ Проект создан!', 'success')
 
-          // Очистка формы
           document.getElementById('projectTitle').value = ''
           document.getElementById('projectDescription').value = ''
           document.getElementById('projectCategory').value = ''
           document.getElementById('feedbackRequest').value = ''
           removeImage()
 
-          // Переход на вкладку проектов
           setTimeout(() => showTab('view'), 1000)
         } catch (error) {
           console.error('Ошибка:', error)
@@ -789,7 +758,6 @@
         }
       }
 
-      // ===== ЗАГРУЗКА ПРОЕКТОВ =====
       async function loadMyProjects() {
         const container = document.getElementById('myProjectsList')
         container.innerHTML = '<div class="loading">🔄 Загрузка...</div>'
@@ -846,7 +814,6 @@
         }
       }
 
-      // ===== ФИДБЕКИ =====
       async function createFeedback(projectId) {
         const content = prompt('💬 Введите ваш фидбек:')
         if (!content || !content.trim()) return
@@ -869,7 +836,6 @@
 
           showNotification('✅ Фидбек отправлен!', 'success')
 
-          // Обновляем список
           if (
             document.getElementById('community').classList.contains('active')
           ) {
@@ -883,7 +849,6 @@
         }
       }
 
-      // ===== РЕНДЕРИНГ =====
       function renderProjects(container, projectsList, isCommunity = false) {
         if (!projectsList.length) {
           container.innerHTML = `
@@ -1019,21 +984,17 @@
         }
       }
 
-      // ===== ЗАПУСК ПРИЛОЖЕНИЯ =====
       document.addEventListener('DOMContentLoaded', () => {
         console.log('🚀 RE:FORM запущен')
 
-        // Инициализация
         currentUser = initTelegram()
 
         if (!initSupabase()) {
           showNotification('❌ Ошибка подключения к базе', 'error')
         }
 
-        // Настройка drag & drop
         setupDragAndDrop()
 
-        // Загружаем проекты сообщества
         loadCommunityProjects()
 
         showNotification('👋 Добро пожаловать в RE:FORM!')

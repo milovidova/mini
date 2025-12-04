@@ -4,13 +4,11 @@ baseurl: ''
 url: 'https://ваш-юзернейм.github.io'
 github_username: ваш-юзернейм
 
-# Настройки для GitHub Pages
 theme: jekyll-theme-cayman
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
 
-# Отключить обработку
 include: ['.htaccess']
 exclude:
   - Gemfile
@@ -18,6 +16,5 @@ exclude:
   - vendor
   - node_modules
 
-# Headers для корректной работы в iframe
 header_files:
   - '_headers'
